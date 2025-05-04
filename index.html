@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>t-Test Calculator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to right, #a18cd1, #fbc2eb);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      padding: 30px;
+      border-radius: 18px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+      width: 95%;
+      max-width: 800px;
+      transition: all 0.3s ease;
+    }
+
+    h1 {
+      text-align: center;
+      color: #6c5ce7;
+      margin-bottom: 25px;
+      font-weight: 600;
+    }
+
+    label {
+      font-weight: 500;
+      color: #2c3e50;
+      display: block;
+      margin-top: 20px;
+    }
+
+    textarea, input, select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      font-size: 1rem;
+      background-color: #f9f9f9;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    textarea::placeholder,
+    input::placeholder {
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    .small-note {
+      font-size: 0.85rem;
+      color: #777;
+      margin-top: 4px;
+      margin-bottom: -10px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(to right, #6c5ce7, #a18cd1);
+      color: white;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      margin-top: 25px;
+      cursor: pointer;
+      transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    button:hover {
+      background: linear-gradient(to right, #5e4bdb, #9b7fd8);
+      transform: scale(1.02);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .results {
+      display: none;
+      margin-top: 30px;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 12px;
+      border-left: 5px solid #6c5ce7;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    .results strong {
+      color: #2c3e50;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 0.9rem;
+      color: #666;
+      font-style: italic;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 20px;
+      }
+
+      button {
+        font-size: 1rem;
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>t-Test Calculator</h1>
+
+    <label>Choose t-Test Type:</label>
+    <select id="testType">
+      <option value="single">t-Test for Single Mean</option>
+      <option value="paired">Paired t-Test for Difference of Means</option>
+      <option value="difference">t-Test for Difference of Means</option>
+    </select>
+
+    <div id="singleInputs">
+      <label>Sample Data:</label>
+      <textarea id="sampleData" placeholder="70, 120, 110, 95..."></textarea>
+      <div class="small-note">(comma-separated)</div>
+
+      <label>Population Mean (μ₀):</label>
+      <input type="number" id="popMean" step="any">
+    </div>
+
+    <div id="pairedInputs" style="display:none;">
+      <label>Sample 1:</label>
+      <textarea id="pairedSample1" placeholder="85, 90, 88, ..."></textarea>
+      <div class="small-note">(comma-separated)</div>
+
+      <label>Sample 2:</label>
+      <textarea id="pairedSample2" placeholder="80, 92, 85, ..."></textarea>
+      <div class="small-note">(comma-separated)</div>
+    </div>
+
+    <div id="diffInputs" style="display:none;">
+      <label>Sample 1:</label>
+      <textarea id="diffSample1" placeholder="78, 88, 84, ..."></textarea>
+      <div class="small-note">(comma-separated)</div>
+
+      <label>Sample 2:</label>
+      <textarea id="diffSample2" placeholder="70, 82, 80, ..."></textarea>
+      <div class="small-note">(comma-separated)</div>
+    </div>
+
+    <label>Tabulated t-value (at 5% level of significance):</label>
+    <input type="number" id="tabT" step="any">
+
+    <button onclick="calculateTTest()">Calculate</button>
+
+    <div class="results" id="results"></div>
+    <div class="footer">Made by Palak • Internship Project</div>
+  </div>
+
+  <script>
+    const testType = document.getElementById("testType");
+    testType.addEventListener("change", () => {
+      document.getElementById("singleInputs").style.display = testType.value === "single" ? "block" : "none";
+      document.getElementById("pairedInputs").style.display = testType.value === "paired" ? "block" : "none";
+      document.getElementById("diffInputs").style.display = testType.value === "difference" ? "block" : "none";
+    });
+
+    function parseData(str) {
+      return str.split(",").map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
+    }
+
+    function mean(data) {
+      return data.reduce((a, b) => a + b, 0) / data.length;
+    }
+
+    function stdDev(data, sampleMean) {
+      const n = data.length;
+      const variance = data.reduce((sum, x) => sum + Math.pow(x - sampleMean, 2), 0) / (n - 1);
+      return Math.sqrt(variance);
+    }
+
+    function singleSampleTTest(data, popMean, tabT) {
+      const n = data.length;
+      const xBar = mean(data);
+      const s = stdDev(data, xBar);
+      const t = Math.abs((xBar - popMean) / (s / Math.sqrt(n)));
+      const df = n - 1;
+      const conclusion = t > tabT ? "H₀ is rejected" : "H₀ may be accepted";
+
+      return {
+        hypotheses: `H₀: μ = ${popMean} <br> H₁: μ ≠ ${popMean}`,
+        t: t.toFixed(4),
+        df,
+        conclusion,
+        tabT
+      };
+    }
+
+    function pairedTTest(sample1, sample2, tabT) {
+      const n = sample1.length;
+      const differences = sample1.map((x, i) => x - sample2[i]);
+      const dBar = mean(differences);
+      const sd = stdDev(differences, dBar);
+      const t = Math.abs(dBar / (sd / Math.sqrt(n)));
+      const df = n - 1;
+      const conclusion = t > tabT ? "H₀ is rejected" : "H₀ may be accepted";
+
+      return {
+        hypotheses: `H₀: μ₁ = μ₂ <br> H₁: μ₁ ≠ μ₂`,
+        t: t.toFixed(4),
+        df,
+        conclusion,
+        tabT
+      };
+    }
+
+    function differenceOfMeans(sample1, sample2, tabT) {
+      const n1 = sample1.length;
+      const n2 = sample2.length;
+      const x1 = mean(sample1);
+      const x2 = mean(sample2);
+      const s1 = stdDev(sample1, x1);
+      const s2 = stdDev(sample2, x2);
+      const pooledVar = (((n1 - 1) * s1 ** 2) + ((n2 - 1) * s2 ** 2)) / (n1 + n2 - 2);
+      const t = Math.abs((x1 - x2) / Math.sqrt(pooledVar * (1 / n1 + 1 / n2)));
+      const df = n1 + n2 - 2;
+      const conclusion = t > tabT ? "H₀ is rejected" : "H₀ may be accepted";
+
+      return {
+        hypotheses: `H₀: μ₁ = μ₂ <br> H₁: μ₁ ≠ μ₂`,
+        t: t.toFixed(4),
+        df,
+        conclusion,
+        tabT
+      };
+    }
+
+    function calculateTTest() {
+      const type = testType.value;
+      const tabT = parseFloat(document.getElementById("tabT").value);
+      let result;
+
+      if (type === "single") {
+        const data = parseData(document.getElementById("sampleData").value);
+        const popMean = parseFloat(document.getElementById("popMean").value);
+        result = singleSampleTTest(data, popMean, tabT);
+      } else if (type === "paired") {
+        const s1 = parseData(document.getElementById("pairedSample1").value);
+        const s2 = parseData(document.getElementById("pairedSample2").value);
+        if (s1.length !== s2.length) {
+          alert("Both samples must be of equal length.");
+          return;
+        }
+        result = pairedTTest(s1, s2, tabT);
+      } else if (type === "difference") {
+        const s1 = parseData(document.getElementById("diffSample1").value);
+        const s2 = parseData(document.getElementById("diffSample2").value);
+        result = differenceOfMeans(s1, s2, tabT);
+      }
+
+      const resultsBox = document.getElementById("results");
+      resultsBox.style.display = "block";
+      resultsBox.innerHTML = `
+        <strong>Hypotheses:</strong><br>${result.hypotheses}<br><br>
+        <strong>t-statistic:</strong> ${result.t}<br>
+        <strong>Degrees of Freedom:</strong> ${result.df}<br>
+        <strong>Tabulated t-value at 5 percent level of significance:</strong> ${result.tabT}<br><br>
+        <strong>Conclusion:</strong> ${result.conclusion}
+      `;
+    }
+  </script>
+</body>
+</html>
